@@ -13,10 +13,23 @@ def post(model,body,tries=4):
             if e.code in (429,500,503): time.sleep(3*(a+1)); continue
             raise RuntimeError(f'{e.code} {msg}')
     raise RuntimeError('retries exhausted')
+TTS_CHAIN=['gemini-3.1-flash-tts-preview','gemini-3.8-flash-tts','gemini-2.5-flash-preview-tts','gemini-3.8-flash-lite-tts']
 def tts(text,voice,direction,out):
     body={'contents':[{'parts':[{'text':f'{direction}: {text}'}]}],'generationConfig':{'responseModalities':['AUDIO'],'speechConfig':{'voiceConfig':{'prebuiltVoiceConfig':{'voiceName':voice}}}}}
-    r=post(TTS_MODEL,body); pcm=base64.b64decode(r['candidates'][0]['content']['parts'][0]['inlineData']['data'])
-    with wave.open(out,'wb') as w: w.setnchannels(1);w.setsampwidth(2);w.setframerate(24000);w.writeframes(pcm)
+    err=None
+    for rnd in range(3):
+        for m in TTS_CHAIN:
+            try:
+                r=post(m,body,tries=2)
+                for p in r['candidates'][0]['content']['parts']:
+                    if 'inlineData' in p:
+                        pcm=base64.b64decode(p['inlineData']['data'])
+                        with wave.open(out,'wb') as w: w.setnchannels(1);w.setsampwidth(2);w.setframerate(24000);w.writeframes(pcm)
+                        return
+                err=RuntimeError(f'{m}: no audio ({str(r)[:150]})')
+            except Exception as e: err=e
+        time.sleep(5)
+    raise err
 def image(prompt,out):
     body={'contents':[{'parts':[{'text':prompt}]}],'generationConfig':{'responseModalities':['IMAGE','TEXT'],'imageConfig':{'aspectRatio':'16:9'}}}
     for m in IMG_CHAIN:
