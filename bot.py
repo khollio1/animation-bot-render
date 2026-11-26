@@ -3,6 +3,7 @@ import os,sys,json,time,subprocess,threading,queue,urllib.request,urllib.parse,u
 import pipeline as P, gen
 TOKEN=os.environ['TELEGRAM_TOKEN']; API=f'https://api.telegram.org/bot{TOKEN}/'
 STATE_KEY=os.environ.get('STATE_KEY',''); STATE_FILE='state.enc'
+ALLOWED={int(x) for x in os.environ.get('ALLOWED_CHATS','844423469').split(',') if x.strip()}
 RUN_SECONDS=int(os.environ.get('RUN_SECONDS','19000'))
 def api(m,**kw):
     d=urllib.parse.urlencode({k:(json.dumps(v) if isinstance(v,(dict,list)) else v) for k,v in kw.items()}).encode()
@@ -96,6 +97,7 @@ def main():
             S['offset']=u['update_id']+1; m=u.get('message') or {}
             t=m.get('text'); cid=(m.get('chat') or {}).get('id')
             if not t or not cid: continue
+            if cid not in ALLOWED: say(cid,'البوت ده خاص حالياً.'); continue
             if BUSY[0] or not Q.empty(): say(cid,'📥 استلمت، في الطابور')
             Q.put((cid,t))
         if r.get('result'): save()
