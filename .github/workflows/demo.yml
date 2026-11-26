@@ -1,0 +1,26 @@
+name: demo
+on:
+  workflow_dispatch:
+    inputs:
+      idea:
+        required: true
+      edit:
+        required: false
+        default: ''
+jobs:
+  demo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq fonts-noto-core libraqm0 libfribidi0 && pip install -q pillow
+      - run: python demo.py
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          DEMO_IDEA: ${{ inputs.idea }}
+          DEMO_EDIT: ${{ inputs.edit }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: demo
+          path: out/
